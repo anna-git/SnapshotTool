@@ -1,12 +1,12 @@
 ﻿using System.Diagnostics;
 using System.IO.Compression;
 
-var folder = args[0] ?? Console.ReadLine();
+var folder = args[0];
 var d = new DirectoryInfo(folder);
 if (folder.EndsWith("zip"))
 {
     Console.WriteLine($"Folder {d.FullName} will be unzipped");
-    var name = d.Name[..^4];
+    var name = d.Name[..^4]; //remove zip extension
     var fullPath = Path.Combine(d.Parent.FullName, name);
     if (Directory.Exists(fullPath))
     {
@@ -15,7 +15,7 @@ if (folder.EndsWith("zip"))
 
     var dInfo = d.Parent.CreateSubdirectory(name);
     ZipFile.ExtractToDirectory(folder, dInfo.FullName);
-    d = dInfo.EnumerateDirectories().First();
+    d = dInfo.EnumerateDirectories().FirstOrDefault();
 }
 
 foreach (var file in d.GetFiles())
@@ -29,6 +29,8 @@ foreach (var file in d.GetFiles())
 
 var destfolder = args[1];
 var replacedFilesNumber = 0;
+Console.WriteLine($"Dest Folder: {destfolder}");
+
 foreach (var file in d.GetFiles())
 {
     if (file.Name.EndsWith("received.txt"))
