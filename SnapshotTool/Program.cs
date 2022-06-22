@@ -1,45 +1,22 @@
 ﻿using System.Diagnostics;
 using System.IO.Compression;
+using SnapshotTool;
 
-var folder = args[0];
-var d = new DirectoryInfo(folder);
-if (folder.EndsWith("zip"))
-{
-    Console.WriteLine($"Folder {d.FullName} will be unzipped");
-    var name = d.Name[..^4]; //remove zip extension
-    var fullPath = Path.Combine(d.Parent.FullName, name);
-    if (Directory.Exists(fullPath))
-    {
-        Directory.Delete(fullPath, true);
-    }
-
-    var dInfo = d.Parent.CreateSubdirectory(name);
-    ZipFile.ExtractToDirectory(folder, dInfo.FullName);
-    d = dInfo.EnumerateDirectories().FirstOrDefault();
-}
-
-foreach (var file in d.GetFiles())
-{
-    // run under linux if file path is too long, pb with win32 apis
-    if (file.Name.EndsWith("verified.txt"))
-    {
-        file.Delete();
-    }
-}
-
-var destfolder = args[1];
 var replacedFilesNumber = 0;
-Console.WriteLine($"Dest Folder: {destfolder}");
-
-foreach (var file in d.GetFiles())
+var destfolder = Environment.GetEnvironmentVariable("dest-folder");
+if (string.IsNullOrEmpty(destfolder))
+    throw new ArgumentNullException($@"dest-folder env variable should exist and is null");
+var folder = Environment.GetEnvironmentVariable("snapshots-folder");
+if (string.IsNullOrEmpty(folder))
 {
-    if (file.Name.EndsWith("received.txt"))
-    {
-        replacedFilesNumber++;
-        var n = file.Name;
-        var newName = n.Replace("received.txt", "verified.txt");
-        var newPath = Path.Combine(destfolder, newName);
-        file.MoveTo(newPath, true);
-    }
+    var containingfolder = Environment.GetEnvironmentVariable("snapshots-folder-container");
+    var dir = new DirectoryInfo(containingfolder);
+    var dirs = dir.GetFiles("*.zip");
+    replacedFilesNumber += dirs.Where (zip => zip.Name.Contains("snapshots")).Sum(zip => SnapshotsCopier.Copy(zip.FullName, destfolder));
 }
+else
+{
+    replacedFilesNumber = SnapshotsCopier.Copy(folder, destfolder);
+}
+
 Console.WriteLine($"Number of files replaced: {replacedFilesNumber}");
